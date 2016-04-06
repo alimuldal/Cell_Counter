@@ -9,12 +9,12 @@
  * it under the terms of the GNU General Public License as
  * published by the Free Software Foundation, either version 3 of the
  * License, or (at your option) any later version.
- * 
+ *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public
  * License along with this program.  If not, see
  * <http://www.gnu.org/licenses/gpl-3.0.html>.
@@ -28,6 +28,7 @@ import ij.ImageStack;
 import ij.WindowManager;
 import ij.gui.ImageWindow;
 import ij.gui.Roi;
+import ij.gui.ShapeRoi;
 import ij.gui.StackWindow;
 import ij.measure.Calibration;
 import ij.process.ImageProcessor;
@@ -86,6 +87,8 @@ public class CellCounter extends JFrame implements ActionListener, ItemListener
 	private static final String LOADMARKERS = "Load Markers";
 	private static final String EXPORTIMG = "Export Image";
 	private static final String MEASURE = "Measure...";
+	private static final String ADDSUBREGION = "Add subregion";
+	private static final String REMOVESUBREGION = "Remove subregion";
 
 	private static final String TYPE_COMMAND_PREFIX = "type";
 
@@ -95,6 +98,7 @@ public class CellCounter extends JFrame implements ActionListener, ItemListener
 	private CellCntrMarkerVector markerVector;
 	private CellCntrMarkerVector currentMarkerVector;
 	private int currentMarkerIndex;
+	private Vector<ShapeRoi> subregionVector;
 
 	private JPanel dynPanel;
 	private JPanel dynButtonPanel;
@@ -118,6 +122,8 @@ public class CellCounter extends JFrame implements ActionListener, ItemListener
 	private JButton loadButton;
 	private JButton exportimgButton;
 	private JButton measureButton;
+	private JButton addSubregionButton;
+	private JButton removeSubregionButton;
 
 	private boolean keepOriginal = false;
 
@@ -136,6 +142,7 @@ public class CellCounter extends JFrame implements ActionListener, ItemListener
 		typeVector = new Vector<CellCntrMarkerVector>();
 		txtFieldVector = new Vector<JTextField>();
 		dynRadioVector = new Vector<JRadioButton>();
+		subregionVector = new Vector<ShapeRoi>();
 		initGUI();
 		populateTxtFields();
 		instance = this;
@@ -165,7 +172,7 @@ public class CellCounter extends JFrame implements ActionListener, ItemListener
 
 		radioGrp = new ButtonGroup();// to group the radiobuttons
 
-		dynGrid = new GridLayout(8, 1);
+		dynGrid = new GridLayout(10, 1);
 		dynGrid.setVgap(2);
 
 		// this panel will keep the dynamic GUI parts
@@ -209,11 +216,15 @@ public class CellCounter extends JFrame implements ActionListener, ItemListener
 		dynButtonPanel.add(makeDynRadioButton(6));
 		dynButtonPanel.add(makeDynRadioButton(7));
 		dynButtonPanel.add(makeDynRadioButton(8));
+		dynButtonPanel.add(makeDynRadioButton(9));
+		dynButtonPanel.add(makeDynRadioButton(10));
 
 		// create a "static" panel to hold control buttons
 		statButtonPanel = new JPanel();
 		statButtonPanel.setBorder(BorderFactory.createTitledBorder("Actions"));
 		statButtonPanel.setLayout(gb);
+
+		// initialization
 
 		gbc = new GridBagConstraints();
 		gbc.anchor = GridBagConstraints.NORTHWEST;
@@ -247,6 +258,8 @@ public class CellCounter extends JFrame implements ActionListener, ItemListener
 		gb.setConstraints(separator, gbc);
 		statButtonPanel.add(separator);
 
+		// marker types
+
 		gbc = new GridBagConstraints();
 		gbc.anchor = GridBagConstraints.NORTHWEST;
 		gbc.fill = GridBagConstraints.BOTH;
@@ -279,12 +292,14 @@ public class CellCounter extends JFrame implements ActionListener, ItemListener
 		gbc.anchor = GridBagConstraints.NORTHWEST;
 		gbc.fill = GridBagConstraints.BOTH;
 		gbc.gridx = 0;
-		gbc.insets = new Insets(3, 0, 3, 0);
 		gbc.gridwidth = GridBagConstraints.REMAINDER;
+		gbc.insets = new Insets(3, 0, 3, 0);
 		separator = new JSeparator(SwingConstants.HORIZONTAL);
 		separator.setPreferredSize(new Dimension(1, 1));
 		gb.setConstraints(separator, gbc);
 		statButtonPanel.add(separator);
+
+		// delete markers
 
 		gbc = new GridBagConstraints();
 		gbc.anchor = GridBagConstraints.NORTHWEST;
@@ -303,7 +318,7 @@ public class CellCounter extends JFrame implements ActionListener, ItemListener
 		gbc.gridwidth = GridBagConstraints.REMAINDER;
 		delCheck = new JCheckBox(DELMODE);
 		delCheck
-			.setToolTipText("When selected\nclick on the marker\nyou want to remove");
+			.setToolTipText("When selected \nclick on the marker \nyou want to remove");
 		delCheck.setSelected(false);
 		delCheck.addItemListener(this);
 		delCheck.setEnabled(false);
@@ -320,6 +335,41 @@ public class CellCounter extends JFrame implements ActionListener, ItemListener
 		separator.setPreferredSize(new Dimension(1, 1));
 		gb.setConstraints(separator, gbc);
 		statButtonPanel.add(separator);
+
+		// polygon subregions
+
+		gbc = new GridBagConstraints();
+		gbc.anchor = GridBagConstraints.NORTHWEST;
+		gbc.fill = GridBagConstraints.BOTH;
+		gbc.gridx = 0;
+		gbc.gridwidth = GridBagConstraints.REMAINDER;
+		addSubregionButton = makeButton(ADDSUBREGION, "add a polygon subregion");
+		addSubregionButton.setEnabled(false);
+		gb.setConstraints(addSubregionButton, gbc);
+		statButtonPanel.add(addSubregionButton);
+
+		gbc = new GridBagConstraints();
+		gbc.anchor = GridBagConstraints.NORTHWEST;
+		gbc.fill = GridBagConstraints.BOTH;
+		gbc.gridx = 0;
+		gbc.gridwidth = GridBagConstraints.REMAINDER;
+		removeSubregionButton = makeButton(REMOVESUBREGION, "remove last subregion");
+		removeSubregionButton.setEnabled(false);
+		gb.setConstraints(removeSubregionButton, gbc);
+		statButtonPanel.add(removeSubregionButton);
+
+		gbc = new GridBagConstraints();
+		gbc.anchor = GridBagConstraints.NORTHWEST;
+		gbc.fill = GridBagConstraints.BOTH;
+		gbc.gridx = 0;
+		gbc.insets = new Insets(3, 0, 3, 0);
+		gbc.gridwidth = GridBagConstraints.REMAINDER;
+		separator = new JSeparator(SwingConstants.HORIZONTAL);
+		separator.setPreferredSize(new Dimension(1, 1));
+		gb.setConstraints(separator, gbc);
+		statButtonPanel.add(separator);
+
+		// options, results, reset
 
 		gbc = new GridBagConstraints();
 		gbc.anchor = GridBagConstraints.NORTHWEST;
@@ -362,6 +412,8 @@ public class CellCounter extends JFrame implements ActionListener, ItemListener
 		separator.setPreferredSize(new Dimension(1, 1));
 		gb.setConstraints(separator, gbc);
 		statButtonPanel.add(separator);
+
+		// show/hide numbers/markers, save/load
 
 		gbc = new GridBagConstraints();
 		gbc.anchor = GridBagConstraints.NORTHWEST;
@@ -412,7 +464,6 @@ public class CellCounter extends JFrame implements ActionListener, ItemListener
 		exportimgButton.setEnabled(false);
 		gb.setConstraints(exportimgButton, gbc);
 		statButtonPanel.add(exportimgButton);
-
 		gbc = new GridBagConstraints();
 		gbc.anchor = GridBagConstraints.NORTHWEST;
 		gbc.fill = GridBagConstraints.BOTH;
@@ -495,14 +546,14 @@ public class CellCounter extends JFrame implements ActionListener, ItemListener
 			IJ.noImage();
 		}
 		else if (img.getStackSize() == 1) {
-			
-			
+
+
 			ImageProcessor ip = img.getProcessor();
 			ip.resetRoi();
-			
+
 			if (keepOriginal) ip = ip.crop();
 			counterImg = new ImagePlus("Counter Window - " + img.getTitle(), ip);
-			
+
 			@SuppressWarnings("unchecked")
 			final Vector<Roi> displayList =
 				v139t ? img.getCanvas().getDisplayList() : null;
@@ -520,7 +571,7 @@ public class CellCounter extends JFrame implements ActionListener, ItemListener
 			}
 			counterImg =
 				new ImagePlus("Counter Window - " + img.getTitle(), counterStack);
-			
+
 			counterImg.setDimensions(img.getNChannels(), img.getNSlices(), img
 				.getNFrames());
 			if (img.isComposite()) {
@@ -535,10 +586,10 @@ public class CellCounter extends JFrame implements ActionListener, ItemListener
 			ic = new CellCntrImageCanvas(counterImg, typeVector, this, displayList);
 			new StackWindow(counterImg, ic);
 		}
-		
+
 		Calibration cal = img.getCalibration();	//	to conserve voxel size of the original image
 		counterImg.setCalibration(cal);
-		
+
 		if (!keepOriginal) {
 			img.changes = false;
 			img.close();
@@ -724,17 +775,17 @@ public class CellCounter extends JFrame implements ActionListener, ItemListener
 			labels = labels.concat(str + "\t");
 		}
 		labels = labels.concat("\tC-pos\tZ-pos\tT-pos\t");						// add new columns containing C,Z,T positions
-		
+
 		IJ.setColumnHeadings(labels);
 		String results = "";
 		if (isStack) {
 			for (int slice = 1; slice <= counterImg.getStackSize(); slice++) {
-				
+
 				int[] realPosArray = counterImg.convertIndexToPosition(slice); // from the slice we get the array  [channel, slice, frame]
 				final int channel 	= realPosArray[0];
 				final int zPos		= realPosArray[1];
 				final int frame 	= realPosArray[2];
-				
+
 				results = "";
 				final ListIterator<CellCntrMarkerVector> mit =
 					typeVector.listIterator();
@@ -755,7 +806,7 @@ public class CellCounter extends JFrame implements ActionListener, ItemListener
 				for (int i = 0; i < typeTotals.length; i++) {
 					results = results.concat(typeTotals[i] + "\t");
 				}
-				String cztPosition = String.format("%d\t%d\t%d\t",channel,zPos,frame);	// concat the c,z,t value position 
+				String cztPosition = String.format("%d\t%d\t%d\t",channel,zPos,frame);	// concat the c,z,t value position
 				results = results.concat(cztPosition);
 				IJ.write(results);
 			}
