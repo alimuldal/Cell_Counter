@@ -103,7 +103,7 @@ public class CellCounter extends JFrame implements ActionListener, ItemListener
 	private int currentSubregionIndex;
 
 	private Vector<JRadioButton> dynCounterRadioVector;
-	private Vector<JRadioButton> dynSubregionRadioVector;
+	private Vector<JTextField> dynSubregionTxtVector;
 	private final Vector<JTextField> txtCounterFieldVector;
 
 	private JPanel dynPanel;
@@ -119,10 +119,7 @@ public class CellCounter extends JFrame implements ActionListener, ItemListener
 	private JCheckBox showAllCheck;
 
 	private ButtonGroup counterRadioGrp;
-	private ButtonGroup subregionGrp;
-
 	private JSeparator separator;
-
 	private JButton addButton;
 	private JButton removeButton;
 	private JButton renameButton;
@@ -145,7 +142,6 @@ public class CellCounter extends JFrame implements ActionListener, ItemListener
 	private ImagePlus img;
 	private ImagePlus counterImg;
 
-	private GridLayout dynCounterGrid;
 	private GridLayout dynCounterRowGrid;
 	private GridLayout dynSubregionGrid;
 
@@ -157,7 +153,7 @@ public class CellCounter extends JFrame implements ActionListener, ItemListener
 		typeVector = new Vector<CellCntrMarkerVector>();
 		txtCounterFieldVector = new Vector<JTextField>();
 		dynCounterRadioVector = new Vector<JRadioButton>();
-		dynSubregionRadioVector = new Vector<JRadioButton>();
+		dynSubregionTxtVector = new Vector<JTextField>();
 		subregionVector = new Vector<ShapeRoi>();
 		initGUI();
 		populateTxtFields();
@@ -188,36 +184,45 @@ public class CellCounter extends JFrame implements ActionListener, ItemListener
 		GridBagConstraints gbc = new GridBagConstraints();
 
 		counterRadioGrp = new ButtonGroup();    // to group the counter radiobuttons
-		subregionGrp = new ButtonGroup();       // to group the subregion radiobuttons
 
 		// this keeps the radiobuttons and text for the counters
 		dynCounterPanel = new JPanel();
 		dynCounterPanel.setBorder(BorderFactory.createTitledBorder("Counters"));
-		dynCounterGrid = new GridLayout(1, 2);
-		dynCounterPanel.setLayout(dynCounterGrid);
+		dynCounterPanel.setLayout(gb);
 
 		// this panel keeps the radiobuttons
 		dynCounterButtonPanel = new JPanel();
 		dynCounterRowGrid = new GridLayout(5, 1);
 		dynCounterRowGrid.setVgap(2);
 		dynCounterButtonPanel.setLayout(dynCounterRowGrid);
-		dynCounterPanel.add(dynCounterButtonPanel);
+
+		gbc.anchor = GridBagConstraints.LINE_START;
+		gbc.fill = GridBagConstraints.BOTH;
+		gbc.ipadx = 5;
+		gbc.gridx = 0;
+		gbc.gridy = 0;
+		dynCounterPanel.add(dynCounterButtonPanel, gbc);
 
 		// this panel keeps the score
 		dynCounterTxtPanel = new JPanel();
 		dynCounterTxtPanel.setLayout(dynCounterRowGrid);
-		dynCounterPanel.add(dynCounterTxtPanel);
+		gbc.anchor = GridBagConstraints.LINE_END;
+		gbc.fill = GridBagConstraints.BOTH;
+		gbc.ipadx = 10;
+		gbc.gridx = 1;
+		gbc.gridy = 0;
+		dynCounterPanel.add(dynCounterTxtPanel, gbc);
 
 		// this panel will keep the dynamic GUI parts
 		dynPanel = new JPanel();
 		dynPanel.setLayout(gb);
-		gbc.anchor = GridBagConstraints.PAGE_START;
+
+		gbc.anchor = GridBagConstraints.FIRST_LINE_START;
 		gbc.fill = GridBagConstraints.HORIZONTAL;
-		gbc.ipady = 5;
 		gbc.weighty = 1;
 		gbc.weightx = 0;
-		gb.setConstraints(dynPanel, gbc);
-
+		gbc.ipadx = 50;
+		gbc.ipady = 5;
 		gbc.gridx = 0;
 		gbc.gridy = 0;
 		dynPanel.add(dynCounterPanel, gbc);
@@ -225,10 +230,6 @@ public class CellCounter extends JFrame implements ActionListener, ItemListener
 		// initialize some counters
 		dynCounterButtonPanel.add(makeDynCounterRadioButton(1));
 		dynCounterButtonPanel.add(makeDynCounterRadioButton(2));
-		dynCounterButtonPanel.add(makeDynCounterRadioButton(3));
-		dynCounterButtonPanel.add(makeDynCounterRadioButton(4));
-		dynCounterButtonPanel.add(makeDynCounterRadioButton(5));
-
 		// second dynamic panel to hold subregions
 		dynSubregionPanel = new JPanel();
 		dynSubregionPanel.setBorder(BorderFactory.createTitledBorder("Subregions"));
@@ -236,15 +237,12 @@ public class CellCounter extends JFrame implements ActionListener, ItemListener
 		dynSubregionGrid.setVgap(2);
 		dynSubregionPanel.setLayout(dynSubregionGrid);
 
+		gbc.ipadx = 50;
 		gbc.gridx = 0;
 		gbc.gridy = 1;
 		dynPanel.add(dynSubregionPanel, gbc);
 
-		dynSubregionPanel.add(makeDynSubregionRadioButton(1));
-		dynSubregionPanel.add(makeDynSubregionRadioButton(2));
-		dynSubregionPanel.add(makeDynSubregionRadioButton(3));
-		dynSubregionPanel.add(makeDynSubregionRadioButton(4));
-		dynSubregionPanel.add(makeDynSubregionRadioButton(5));
+		dynSubregionPanel.add(makeDynSubregionTxt(1));
 
 		getContentPane().add(dynPanel, BorderLayout.LINE_START);
 
@@ -561,16 +559,15 @@ public class CellCounter extends JFrame implements ActionListener, ItemListener
 		return jrButton;
 	}
 
-	private JRadioButton makeDynSubregionRadioButton(final int id) {
-		final JRadioButton jrButton = new JRadioButton("Subregion " + id);
-		jrButton.setActionCommand(SUBREGION_COMMAND_PREFIX + id);
-		jrButton.addActionListener(this);
-		dynSubregionRadioVector.add(jrButton);
-		subregionGrp.add(jrButton);
+	private JTextField makeDynSubregionTxt(final int id) {
+		final JTextField tArea = new JTextField("Subregion " + id);
+		tArea.setActionCommand(SUBREGION_COMMAND_PREFIX + id);
+		tArea.addActionListener(this);
+		dynSubregionTxtVector.add(tArea);
 		// markerVector = new CellCntrMarkerVector(id); // make a new polygon?
 		// typeVector.add(markerVector);
 		// dynCounterTxtPanel.add(makeDynamicTextArea());
-		return jrButton;
+		return tArea;
 	}
 
 	private JButton makeButton(final String name, final String tooltip) {
@@ -708,18 +705,18 @@ public class CellCounter extends JFrame implements ActionListener, ItemListener
 			counterRadioGrp.add(button);
 		}
 		else if (command.equals(ADDSUBREGION)){
-			final int i = dynSubregionRadioVector.size() + 1;
+			//TODO: pick an ROI here!
+			final int i = dynSubregionTxtVector.size() + 1;
 			dynSubregionGrid.setRows(i);
-			dynSubregionPanel.add(makeDynSubregionRadioButton(i));
+			dynSubregionPanel.add(makeDynSubregionTxt(i));
 			validateLayout();
 		}
 		else if (command.equals(REMOVESUBREGION)){
-			if (dynSubregionRadioVector.size() > 1) {
-				final JRadioButton rbutton = dynSubregionRadioVector.lastElement();
-				dynSubregionPanel.remove(rbutton);
-				subregionGrp.remove(rbutton);
-				dynSubregionRadioVector.removeElementAt(dynSubregionRadioVector.size() - 1);
-				dynSubregionGrid.setRows(dynSubregionRadioVector.size());
+			if (dynSubregionTxtVector.size() > 1) {
+				final JTextField tArea = dynSubregionTxtVector.lastElement();
+				dynSubregionPanel.remove(tArea);
+				dynSubregionTxtVector.removeElementAt(dynSubregionTxtVector.size() - 1);
+				dynSubregionGrid.setRows(dynSubregionTxtVector.size());
 			}
 			// TODO: other stuff...
 			validateLayout();
@@ -907,7 +904,7 @@ public class CellCounter extends JFrame implements ActionListener, ItemListener
 					dynCounterButtonPanel.remove(rbutton);
 					counterRadioGrp.remove(rbutton);
 					dynCounterRadioVector.removeElementAt(dynCounterRadioVector.size() - 1);
-					dynCounterGrid.setRows(dynCounterRadioVector.size());
+					dynCounterRowGrid.setRows(dynCounterRadioVector.size());
 				}
 				if (txtCounterFieldVector.size() > 1) {
 					final JTextField field = txtCounterFieldVector.lastElement();
