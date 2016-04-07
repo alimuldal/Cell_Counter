@@ -696,6 +696,7 @@ public class CellCounter extends JFrame implements ActionListener, ItemListener
 
 			if (ic != null) ic.setTypeVector(typeVector);
 		}
+		// TODO: change these to editable text boxes
 		else if (command.equals(RENAME)) {
 			if (currentMarkerIndex < 0) return; // no counter type selected
 			final JRadioButton button = dynCounterRadioVector.get(currentMarkerIndex);
@@ -705,6 +706,23 @@ public class CellCounter extends JFrame implements ActionListener, ItemListener
 			counterRadioGrp.remove(button);
 			button.setText(name);
 			counterRadioGrp.add(button);
+		}
+		else if (command.equals(ADDSUBREGION)){
+			final int i = dynSubregionRadioVector.size() + 1;
+			dynSubregionGrid.setRows(i);
+			dynSubregionPanel.add(makeDynSubregionRadioButton(i));
+			validateLayout();
+		}
+		else if (command.equals(REMOVESUBREGION)){
+			if (dynSubregionRadioVector.size() > 1) {
+				final JRadioButton rbutton = dynSubregionRadioVector.lastElement();
+				dynSubregionPanel.remove(rbutton);
+				subregionGrp.remove(rbutton);
+				dynSubregionRadioVector.removeElementAt(dynSubregionRadioVector.size() - 1);
+				dynSubregionGrid.setRows(dynSubregionRadioVector.size());
+			}
+			// TODO: other stuff...
+			validateLayout();
 		}
 		else if (command.equals(INITIALIZE)) {
 			initializeImage();
