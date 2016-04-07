@@ -36,6 +36,7 @@ import ij.process.ImageProcessor;
 import java.awt.Dimension;
 import java.awt.EventQueue;
 import java.awt.FileDialog;
+import java.awt.BorderLayout;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.GridLayout;
@@ -91,25 +92,37 @@ public class CellCounter extends JFrame implements ActionListener, ItemListener
 	private static final String REMOVESUBREGION = "Remove subregion";
 
 	private static final String TYPE_COMMAND_PREFIX = "type";
+	private static final String SUBREGION_COMMAND_PREFIX = "subregion";
 
 	private Vector<CellCntrMarkerVector> typeVector;
-	private Vector<JRadioButton> dynRadioVector;
-	private final Vector<JTextField> txtFieldVector;
 	private CellCntrMarkerVector markerVector;
 	private CellCntrMarkerVector currentMarkerVector;
 	private int currentMarkerIndex;
+
 	private Vector<ShapeRoi> subregionVector;
+	private int currentSubregionIndex;
+
+	private Vector<JRadioButton> dynCounterRadioVector;
+	private Vector<JRadioButton> dynSubregionRadioVector;
+	private final Vector<JTextField> txtCounterFieldVector;
 
 	private JPanel dynPanel;
-	private JPanel dynButtonPanel;
+	private JPanel dynCounterPanel;
+	private JPanel dynCounterButtonPanel;
+	private JPanel dynSubregionPanel;
 	private JPanel statButtonPanel;
-	private JPanel dynTxtPanel;
+	private JPanel dynCounterTxtPanel;
+
 	private JCheckBox delCheck;
 	private JCheckBox newCheck;
 	private JCheckBox numbersCheck;
 	private JCheckBox showAllCheck;
-	private ButtonGroup radioGrp;
+
+	private ButtonGroup counterRadioGrp;
+	private ButtonGroup subregionGrp;
+
 	private JSeparator separator;
+
 	private JButton addButton;
 	private JButton removeButton;
 	private JButton renameButton;
@@ -132,7 +145,9 @@ public class CellCounter extends JFrame implements ActionListener, ItemListener
 	private ImagePlus img;
 	private ImagePlus counterImg;
 
-	private GridLayout dynGrid;
+	private GridLayout dynCounterGrid;
+	private GridLayout dynCounterRowGrid;
+	private GridLayout dynSubregionGrid;
 
 	static CellCounter instance;
 
@@ -140,8 +155,9 @@ public class CellCounter extends JFrame implements ActionListener, ItemListener
 		super("Cell Counter");
 		setResizable(false);
 		typeVector = new Vector<CellCntrMarkerVector>();
-		txtFieldVector = new Vector<JTextField>();
-		dynRadioVector = new Vector<JRadioButton>();
+		txtCounterFieldVector = new Vector<JTextField>();
+		dynCounterRadioVector = new Vector<JRadioButton>();
+		dynSubregionRadioVector = new Vector<JRadioButton>();
 		subregionVector = new Vector<ShapeRoi>();
 		initGUI();
 		populateTxtFields();
@@ -167,57 +183,70 @@ public class CellCounter extends JFrame implements ActionListener, ItemListener
 
 	private void initGUI() {
 		setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
+
 		final GridBagLayout gb = new GridBagLayout();
-		getContentPane().setLayout(gb);
+		GridBagConstraints gbc = new GridBagConstraints();
 
-		radioGrp = new ButtonGroup();// to group the radiobuttons
+		counterRadioGrp = new ButtonGroup();    // to group the counter radiobuttons
+		subregionGrp = new ButtonGroup();       // to group the subregion radiobuttons
 
-		dynGrid = new GridLayout(10, 1);
-		dynGrid.setVgap(2);
+		// this keeps the radiobuttons and text for the counters
+		dynCounterPanel = new JPanel();
+		dynCounterPanel.setBorder(BorderFactory.createTitledBorder("Counters"));
+		dynCounterGrid = new GridLayout(1, 2);
+		dynCounterPanel.setLayout(dynCounterGrid);
+
+		// this panel keeps the radiobuttons
+		dynCounterButtonPanel = new JPanel();
+		dynCounterRowGrid = new GridLayout(5, 1);
+		dynCounterRowGrid.setVgap(2);
+		dynCounterButtonPanel.setLayout(dynCounterRowGrid);
+		dynCounterPanel.add(dynCounterButtonPanel);
+
+		// this panel keeps the score
+		dynCounterTxtPanel = new JPanel();
+		dynCounterTxtPanel.setLayout(dynCounterRowGrid);
+		dynCounterPanel.add(dynCounterTxtPanel);
 
 		// this panel will keep the dynamic GUI parts
 		dynPanel = new JPanel();
-		dynPanel.setBorder(BorderFactory.createTitledBorder("Counters"));
 		dynPanel.setLayout(gb);
-
-		// this panel keeps the radiobuttons
-		dynButtonPanel = new JPanel();
-		dynButtonPanel.setLayout(dynGrid);
-
-		GridBagConstraints gbc = new GridBagConstraints();
-		gbc.anchor = GridBagConstraints.NORTHWEST;
-		gbc.fill = GridBagConstraints.BOTH;
-		gbc.ipadx = 5;
-		gb.setConstraints(dynButtonPanel, gbc);
-		dynPanel.add(dynButtonPanel);
-
-		// this panel keeps the score
-		dynTxtPanel = new JPanel();
-		dynTxtPanel.setLayout(dynGrid);
-		gbc = new GridBagConstraints();
-		gbc.anchor = GridBagConstraints.NORTHWEST;
-		gbc.fill = GridBagConstraints.BOTH;
-		gbc.ipadx = 5;
-		gb.setConstraints(dynTxtPanel, gbc);
-		dynPanel.add(dynTxtPanel);
-
-		gbc = new GridBagConstraints();
-		gbc.anchor = GridBagConstraints.NORTHWEST;
-		gbc.fill = GridBagConstraints.NONE;
-		gbc.ipadx = 5;
+		gbc.anchor = GridBagConstraints.PAGE_START;
+		gbc.fill = GridBagConstraints.HORIZONTAL;
+		gbc.ipady = 5;
+		gbc.weighty = 1;
+		gbc.weightx = 0;
 		gb.setConstraints(dynPanel, gbc);
-		getContentPane().add(dynPanel);
 
-		dynButtonPanel.add(makeDynRadioButton(1));
-		dynButtonPanel.add(makeDynRadioButton(2));
-		dynButtonPanel.add(makeDynRadioButton(3));
-		dynButtonPanel.add(makeDynRadioButton(4));
-		dynButtonPanel.add(makeDynRadioButton(5));
-		dynButtonPanel.add(makeDynRadioButton(6));
-		dynButtonPanel.add(makeDynRadioButton(7));
-		dynButtonPanel.add(makeDynRadioButton(8));
-		dynButtonPanel.add(makeDynRadioButton(9));
-		dynButtonPanel.add(makeDynRadioButton(10));
+		gbc.gridx = 0;
+		gbc.gridy = 0;
+		dynPanel.add(dynCounterPanel, gbc);
+
+		// initialize some counters
+		dynCounterButtonPanel.add(makeDynCounterRadioButton(1));
+		dynCounterButtonPanel.add(makeDynCounterRadioButton(2));
+		dynCounterButtonPanel.add(makeDynCounterRadioButton(3));
+		dynCounterButtonPanel.add(makeDynCounterRadioButton(4));
+		dynCounterButtonPanel.add(makeDynCounterRadioButton(5));
+
+		// second dynamic panel to hold subregions
+		dynSubregionPanel = new JPanel();
+		dynSubregionPanel.setBorder(BorderFactory.createTitledBorder("Subregions"));
+		dynSubregionGrid = new GridLayout(5, 1);
+		dynSubregionGrid.setVgap(2);
+		dynSubregionPanel.setLayout(dynSubregionGrid);
+
+		gbc.gridx = 0;
+		gbc.gridy = 1;
+		dynPanel.add(dynSubregionPanel, gbc);
+
+		dynSubregionPanel.add(makeDynSubregionRadioButton(1));
+		dynSubregionPanel.add(makeDynSubregionRadioButton(2));
+		dynSubregionPanel.add(makeDynSubregionRadioButton(3));
+		dynSubregionPanel.add(makeDynSubregionRadioButton(4));
+		dynSubregionPanel.add(makeDynSubregionRadioButton(5));
+
+		getContentPane().add(dynPanel, BorderLayout.LINE_START);
 
 		// create a "static" panel to hold control buttons
 		statButtonPanel = new JPanel();
@@ -227,7 +256,7 @@ public class CellCounter extends JFrame implements ActionListener, ItemListener
 		// initialization
 
 		gbc = new GridBagConstraints();
-		gbc.anchor = GridBagConstraints.NORTHWEST;
+		gbc.anchor = GridBagConstraints.FIRST_LINE_START;
 		gbc.fill = GridBagConstraints.BOTH;
 		gbc.gridx = 0;
 		gbc.gridwidth = GridBagConstraints.REMAINDER;
@@ -239,7 +268,7 @@ public class CellCounter extends JFrame implements ActionListener, ItemListener
 		statButtonPanel.add(newCheck);
 
 		gbc = new GridBagConstraints();
-		gbc.anchor = GridBagConstraints.NORTHWEST;
+		gbc.anchor = GridBagConstraints.FIRST_LINE_START;
 		gbc.fill = GridBagConstraints.BOTH;
 		gbc.gridx = 0;
 		gbc.gridwidth = GridBagConstraints.REMAINDER;
@@ -248,7 +277,7 @@ public class CellCounter extends JFrame implements ActionListener, ItemListener
 		statButtonPanel.add(initializeButton);
 
 		gbc = new GridBagConstraints();
-		gbc.anchor = GridBagConstraints.NORTHWEST;
+		gbc.anchor = GridBagConstraints.FIRST_LINE_START;
 		gbc.fill = GridBagConstraints.BOTH;
 		gbc.gridx = 0;
 		gbc.gridwidth = GridBagConstraints.REMAINDER;
@@ -261,7 +290,7 @@ public class CellCounter extends JFrame implements ActionListener, ItemListener
 		// marker types
 
 		gbc = new GridBagConstraints();
-		gbc.anchor = GridBagConstraints.NORTHWEST;
+		gbc.anchor = GridBagConstraints.FIRST_LINE_START;
 		gbc.fill = GridBagConstraints.BOTH;
 		gbc.gridx = 0;
 		gbc.gridwidth = GridBagConstraints.REMAINDER;
@@ -270,7 +299,7 @@ public class CellCounter extends JFrame implements ActionListener, ItemListener
 		statButtonPanel.add(addButton);
 
 		gbc = new GridBagConstraints();
-		gbc.anchor = GridBagConstraints.NORTHWEST;
+		gbc.anchor = GridBagConstraints.FIRST_LINE_START;
 		gbc.fill = GridBagConstraints.BOTH;
 		gbc.gridx = 0;
 		gbc.gridwidth = GridBagConstraints.REMAINDER;
@@ -279,7 +308,7 @@ public class CellCounter extends JFrame implements ActionListener, ItemListener
 		statButtonPanel.add(removeButton);
 
 		gbc = new GridBagConstraints();
-		gbc.anchor = GridBagConstraints.NORTHWEST;
+		gbc.anchor = GridBagConstraints.FIRST_LINE_START;
 		gbc.fill = GridBagConstraints.BOTH;
 		gbc.gridx = 0;
 		gbc.gridwidth = GridBagConstraints.REMAINDER;
@@ -289,7 +318,7 @@ public class CellCounter extends JFrame implements ActionListener, ItemListener
 		statButtonPanel.add(renameButton);
 
 		gbc = new GridBagConstraints();
-		gbc.anchor = GridBagConstraints.NORTHWEST;
+		gbc.anchor = GridBagConstraints.FIRST_LINE_START;
 		gbc.fill = GridBagConstraints.BOTH;
 		gbc.gridx = 0;
 		gbc.gridwidth = GridBagConstraints.REMAINDER;
@@ -302,7 +331,7 @@ public class CellCounter extends JFrame implements ActionListener, ItemListener
 		// delete markers
 
 		gbc = new GridBagConstraints();
-		gbc.anchor = GridBagConstraints.NORTHWEST;
+		gbc.anchor = GridBagConstraints.FIRST_LINE_START;
 		gbc.fill = GridBagConstraints.BOTH;
 		gbc.gridx = 0;
 		gbc.gridwidth = GridBagConstraints.REMAINDER;
@@ -312,7 +341,7 @@ public class CellCounter extends JFrame implements ActionListener, ItemListener
 		statButtonPanel.add(deleteButton);
 
 		gbc = new GridBagConstraints();
-		gbc.anchor = GridBagConstraints.NORTHWEST;
+		gbc.anchor = GridBagConstraints.FIRST_LINE_START;
 		gbc.fill = GridBagConstraints.BOTH;
 		gbc.gridx = 0;
 		gbc.gridwidth = GridBagConstraints.REMAINDER;
@@ -326,7 +355,7 @@ public class CellCounter extends JFrame implements ActionListener, ItemListener
 		statButtonPanel.add(delCheck);
 
 		gbc = new GridBagConstraints();
-		gbc.anchor = GridBagConstraints.NORTHWEST;
+		gbc.anchor = GridBagConstraints.FIRST_LINE_START;
 		gbc.fill = GridBagConstraints.BOTH;
 		gbc.gridx = 0;
 		gbc.gridwidth = GridBagConstraints.REMAINDER;
@@ -339,7 +368,7 @@ public class CellCounter extends JFrame implements ActionListener, ItemListener
 		// polygon subregions
 
 		gbc = new GridBagConstraints();
-		gbc.anchor = GridBagConstraints.NORTHWEST;
+		gbc.anchor = GridBagConstraints.FIRST_LINE_START;
 		gbc.fill = GridBagConstraints.BOTH;
 		gbc.gridx = 0;
 		gbc.gridwidth = GridBagConstraints.REMAINDER;
@@ -349,7 +378,7 @@ public class CellCounter extends JFrame implements ActionListener, ItemListener
 		statButtonPanel.add(addSubregionButton);
 
 		gbc = new GridBagConstraints();
-		gbc.anchor = GridBagConstraints.NORTHWEST;
+		gbc.anchor = GridBagConstraints.FIRST_LINE_START;
 		gbc.fill = GridBagConstraints.BOTH;
 		gbc.gridx = 0;
 		gbc.gridwidth = GridBagConstraints.REMAINDER;
@@ -359,7 +388,7 @@ public class CellCounter extends JFrame implements ActionListener, ItemListener
 		statButtonPanel.add(removeSubregionButton);
 
 		gbc = new GridBagConstraints();
-		gbc.anchor = GridBagConstraints.NORTHWEST;
+		gbc.anchor = GridBagConstraints.FIRST_LINE_START;
 		gbc.fill = GridBagConstraints.BOTH;
 		gbc.gridx = 0;
 		gbc.insets = new Insets(3, 0, 3, 0);
@@ -372,7 +401,7 @@ public class CellCounter extends JFrame implements ActionListener, ItemListener
 		// options, results, reset
 
 		gbc = new GridBagConstraints();
-		gbc.anchor = GridBagConstraints.NORTHWEST;
+		gbc.anchor = GridBagConstraints.FIRST_LINE_START;
 		gbc.fill = GridBagConstraints.BOTH;
 		gbc.gridx = 0;
 		gbc.gridwidth = GridBagConstraints.REMAINDER;
@@ -382,7 +411,7 @@ public class CellCounter extends JFrame implements ActionListener, ItemListener
 		statButtonPanel.add(optionsButton);
 
 		gbc = new GridBagConstraints();
-		gbc.anchor = GridBagConstraints.NORTHWEST;
+		gbc.anchor = GridBagConstraints.FIRST_LINE_START;
 		gbc.fill = GridBagConstraints.BOTH;
 		gbc.gridx = 0;
 		gbc.gridwidth = GridBagConstraints.REMAINDER;
@@ -393,7 +422,7 @@ public class CellCounter extends JFrame implements ActionListener, ItemListener
 		statButtonPanel.add(resultsButton);
 
 		gbc = new GridBagConstraints();
-		gbc.anchor = GridBagConstraints.NORTHWEST;
+		gbc.anchor = GridBagConstraints.FIRST_LINE_START;
 		gbc.fill = GridBagConstraints.BOTH;
 		gbc.gridx = 0;
 		gbc.gridwidth = GridBagConstraints.REMAINDER;
@@ -403,7 +432,7 @@ public class CellCounter extends JFrame implements ActionListener, ItemListener
 		statButtonPanel.add(resetButton);
 
 		gbc = new GridBagConstraints();
-		gbc.anchor = GridBagConstraints.NORTHWEST;
+		gbc.anchor = GridBagConstraints.FIRST_LINE_START;
 		gbc.fill = GridBagConstraints.BOTH;
 		gbc.gridx = 0;
 		gbc.gridwidth = GridBagConstraints.REMAINDER;
@@ -416,7 +445,7 @@ public class CellCounter extends JFrame implements ActionListener, ItemListener
 		// show/hide numbers/markers, save/load
 
 		gbc = new GridBagConstraints();
-		gbc.anchor = GridBagConstraints.NORTHWEST;
+		gbc.anchor = GridBagConstraints.FIRST_LINE_START;
 		gbc.fill = GridBagConstraints.BOTH;
 		gbc.gridx = 0;
 		gbc.gridwidth = GridBagConstraints.REMAINDER;
@@ -437,7 +466,7 @@ public class CellCounter extends JFrame implements ActionListener, ItemListener
 		statButtonPanel.add(showAllCheck);
 
 		gbc = new GridBagConstraints();
-		gbc.anchor = GridBagConstraints.NORTHWEST;
+		gbc.anchor = GridBagConstraints.FIRST_LINE_START;
 		gbc.fill = GridBagConstraints.BOTH;
 		gbc.gridx = 0;
 		gbc.gridwidth = GridBagConstraints.REMAINDER;
@@ -447,7 +476,7 @@ public class CellCounter extends JFrame implements ActionListener, ItemListener
 		statButtonPanel.add(exportButton);
 
 		gbc = new GridBagConstraints();
-		gbc.anchor = GridBagConstraints.NORTHWEST;
+		gbc.anchor = GridBagConstraints.FIRST_LINE_START;
 		gbc.fill = GridBagConstraints.BOTH;
 		gbc.gridx = 0;
 		gbc.gridwidth = GridBagConstraints.REMAINDER;
@@ -456,7 +485,7 @@ public class CellCounter extends JFrame implements ActionListener, ItemListener
 		statButtonPanel.add(loadButton);
 
 		gbc = new GridBagConstraints();
-		gbc.anchor = GridBagConstraints.NORTHWEST;
+		gbc.anchor = GridBagConstraints.FIRST_LINE_START;
 		gbc.fill = GridBagConstraints.BOTH;
 		gbc.gridx = 0;
 		gbc.gridwidth = GridBagConstraints.REMAINDER;
@@ -465,7 +494,7 @@ public class CellCounter extends JFrame implements ActionListener, ItemListener
 		gb.setConstraints(exportimgButton, gbc);
 		statButtonPanel.add(exportimgButton);
 		gbc = new GridBagConstraints();
-		gbc.anchor = GridBagConstraints.NORTHWEST;
+		gbc.anchor = GridBagConstraints.FIRST_LINE_START;
 		gbc.fill = GridBagConstraints.BOTH;
 		gbc.gridx = 0;
 		gbc.gridwidth = GridBagConstraints.REMAINDER;
@@ -476,7 +505,7 @@ public class CellCounter extends JFrame implements ActionListener, ItemListener
 		statButtonPanel.add(separator);
 
 		gbc = new GridBagConstraints();
-		gbc.anchor = GridBagConstraints.NORTHWEST;
+		gbc.anchor = GridBagConstraints.FIRST_LINE_START;
 		gbc.fill = GridBagConstraints.BOTH;
 		gbc.gridx = 0;
 		gbc.gridwidth = GridBagConstraints.REMAINDER;
@@ -487,11 +516,12 @@ public class CellCounter extends JFrame implements ActionListener, ItemListener
 		statButtonPanel.add(measureButton);
 
 		gbc = new GridBagConstraints();
-		gbc.anchor = GridBagConstraints.NORTHWEST;
+		gbc.anchor = GridBagConstraints.FIRST_LINE_START;
 		gbc.fill = GridBagConstraints.NONE;
 		gbc.ipadx = 5;
 		gb.setConstraints(statButtonPanel, gbc);
-		getContentPane().add(statButtonPanel);
+
+		getContentPane().add(statButtonPanel, BorderLayout.LINE_END);
 
 		final Runnable runner = new GUIShower(this);
 		EventQueue.invokeLater(runner);
@@ -503,7 +533,7 @@ public class CellCounter extends JFrame implements ActionListener, ItemListener
 		txtFld.setBorder(BorderFactory.createEtchedBorder(EtchedBorder.LOWERED));
 		txtFld.setEditable(false);
 		txtFld.setText("0");
-		txtFieldVector.add(txtFld);
+		txtCounterFieldVector.add(txtFld);
 		return txtFld;
 	}
 
@@ -513,21 +543,33 @@ public class CellCounter extends JFrame implements ActionListener, ItemListener
 			final int index = it.nextIndex();
 			final CellCntrMarkerVector markerVector = it.next();
 			final int count = markerVector.size();
-			final JTextField tArea = txtFieldVector.get(index);
+			final JTextField tArea = txtCounterFieldVector.get(index);
 			tArea.setText("" + count);
 		}
 		validateLayout();
 	}
 
-	private JRadioButton makeDynRadioButton(final int id) {
+	private JRadioButton makeDynCounterRadioButton(final int id) {
 		final JRadioButton jrButton = new JRadioButton("Type " + id);
 		jrButton.setActionCommand(TYPE_COMMAND_PREFIX + id);
 		jrButton.addActionListener(this);
-		dynRadioVector.add(jrButton);
-		radioGrp.add(jrButton);
+		dynCounterRadioVector.add(jrButton);
+		counterRadioGrp.add(jrButton);
 		markerVector = new CellCntrMarkerVector(id);
 		typeVector.add(markerVector);
-		dynTxtPanel.add(makeDynamicTextArea());
+		dynCounterTxtPanel.add(makeDynamicTextArea());
+		return jrButton;
+	}
+
+	private JRadioButton makeDynSubregionRadioButton(final int id) {
+		final JRadioButton jrButton = new JRadioButton("Subregion " + id);
+		jrButton.setActionCommand(SUBREGION_COMMAND_PREFIX + id);
+		jrButton.addActionListener(this);
+		dynSubregionRadioVector.add(jrButton);
+		subregionGrp.add(jrButton);
+		// markerVector = new CellCntrMarkerVector(id); // make a new polygon?
+		// typeVector.add(markerVector);
+		// dynCounterTxtPanel.add(makeDynamicTextArea());
 		return jrButton;
 	}
 
@@ -601,6 +643,8 @@ public class CellCounter extends JFrame implements ActionListener, ItemListener
 		addButton.setEnabled(true);
 		removeButton.setEnabled(true);
 		renameButton.setEnabled(true);
+		addSubregionButton.setEnabled(true);
+		removeSubregionButton.setEnabled(true);
 		resultsButton.setEnabled(true);
 		deleteButton.setEnabled(true);
 		resetButton.setEnabled(true);
@@ -611,8 +655,10 @@ public class CellCounter extends JFrame implements ActionListener, ItemListener
 
 	void validateLayout() {
 		dynPanel.validate();
-		dynButtonPanel.validate();
-		dynTxtPanel.validate();
+		dynCounterPanel.validate();
+		dynCounterButtonPanel.validate();
+		dynCounterTxtPanel.validate();
+		dynSubregionPanel.validate();
 		statButtonPanel.validate();
 		validate();
 		pack();
@@ -623,25 +669,25 @@ public class CellCounter extends JFrame implements ActionListener, ItemListener
 		final String command = event.getActionCommand();
 
 		if (command.equals(ADD)) {
-			final int i = dynRadioVector.size() + 1;
-			dynGrid.setRows(i);
-			dynButtonPanel.add(makeDynRadioButton(i));
+			final int i = dynCounterRadioVector.size() + 1;
+			dynCounterRowGrid.setRows(i);
+			dynCounterButtonPanel.add(makeDynCounterRadioButton(i));
 			validateLayout();
 
 			if (ic != null) ic.setTypeVector(typeVector);
 		}
 		else if (command.equals(REMOVE)) {
-			if (dynRadioVector.size() > 1) {
-				final JRadioButton rbutton = dynRadioVector.lastElement();
-				dynButtonPanel.remove(rbutton);
-				radioGrp.remove(rbutton);
-				dynRadioVector.removeElementAt(dynRadioVector.size() - 1);
-				dynGrid.setRows(dynRadioVector.size());
+			if (dynCounterRadioVector.size() > 1) {
+				final JRadioButton rbutton = dynCounterRadioVector.lastElement();
+				dynCounterButtonPanel.remove(rbutton);
+				counterRadioGrp.remove(rbutton);
+				dynCounterRadioVector.removeElementAt(dynCounterRadioVector.size() - 1);
+				dynCounterRowGrid.setRows(dynCounterRadioVector.size());
 			}
-			if (txtFieldVector.size() > 1) {
-				final JTextField field = txtFieldVector.lastElement();
-				dynTxtPanel.remove(field);
-				txtFieldVector.removeElementAt(txtFieldVector.size() - 1);
+			if (txtCounterFieldVector.size() > 1) {
+				final JTextField field = txtCounterFieldVector.lastElement();
+				dynCounterTxtPanel.remove(field);
+				txtCounterFieldVector.removeElementAt(txtCounterFieldVector.size() - 1);
 			}
 			if (typeVector.size() > 1) {
 				typeVector.removeElementAt(typeVector.size() - 1);
@@ -652,13 +698,13 @@ public class CellCounter extends JFrame implements ActionListener, ItemListener
 		}
 		else if (command.equals(RENAME)) {
 			if (currentMarkerIndex < 0) return; // no counter type selected
-			final JRadioButton button = dynRadioVector.get(currentMarkerIndex);
+			final JRadioButton button = dynCounterRadioVector.get(currentMarkerIndex);
 			final String name =
 				IJ.getString("Enter new counter name", button.getText());
 			if (name == null || name.isEmpty()) return;
-			radioGrp.remove(button);
+			counterRadioGrp.remove(button);
 			button.setText(name);
-			radioGrp.add(button);
+			counterRadioGrp.add(button);
 		}
 		else if (command.equals(INITIALIZE)) {
 			initializeImage();
@@ -768,7 +814,7 @@ public class CellCounter extends JFrame implements ActionListener, ItemListener
 		String labels = "Slice\t";
 		final boolean isStack = counterImg.getStackSize() > 1;
 		// add the types according to the button vector!!!!
-		final ListIterator<JRadioButton> it = dynRadioVector.listIterator();
+		final ListIterator<JRadioButton> it = dynCounterRadioVector.listIterator();
 		while (it.hasNext()) {
 			final JRadioButton button = it.next();
 			final String str = button.getText(); // System.out.println(str);
@@ -837,21 +883,21 @@ public class CellCounter extends JFrame implements ActionListener, ItemListener
 			currentMarkerVector = typeVector.get(index);
 			ic.setCurrentMarkerVector(currentMarkerVector);
 
-			while (dynRadioVector.size() > typeVector.size()) {
-				if (dynRadioVector.size() > 1) {
-					final JRadioButton rbutton = dynRadioVector.lastElement();
-					dynButtonPanel.remove(rbutton);
-					radioGrp.remove(rbutton);
-					dynRadioVector.removeElementAt(dynRadioVector.size() - 1);
-					dynGrid.setRows(dynRadioVector.size());
+			while (dynCounterRadioVector.size() > typeVector.size()) {
+				if (dynCounterRadioVector.size() > 1) {
+					final JRadioButton rbutton = dynCounterRadioVector.lastElement();
+					dynCounterButtonPanel.remove(rbutton);
+					counterRadioGrp.remove(rbutton);
+					dynCounterRadioVector.removeElementAt(dynCounterRadioVector.size() - 1);
+					dynCounterGrid.setRows(dynCounterRadioVector.size());
 				}
-				if (txtFieldVector.size() > 1) {
-					final JTextField field = txtFieldVector.lastElement();
-					dynTxtPanel.remove(field);
-					txtFieldVector.removeElementAt(txtFieldVector.size() - 1);
+				if (txtCounterFieldVector.size() > 1) {
+					final JTextField field = txtCounterFieldVector.lastElement();
+					dynCounterTxtPanel.remove(field);
+					txtCounterFieldVector.removeElementAt(txtCounterFieldVector.size() - 1);
 				}
 			}
-			final JRadioButton butt = dynRadioVector.get(index);
+			final JRadioButton butt = dynCounterRadioVector.get(index);
 			butt.setSelected(true);
 		}
 		else {
@@ -900,11 +946,11 @@ public class CellCounter extends JFrame implements ActionListener, ItemListener
 	}
 
 	public Vector<JRadioButton> getButtonVector() {
-		return dynRadioVector;
+		return dynCounterRadioVector;
 	}
 
 	public void setButtonVector(final Vector<JRadioButton> buttonVector) {
-		this.dynRadioVector = buttonVector;
+		this.dynCounterRadioVector = buttonVector;
 	}
 
 	public CellCntrMarkerVector getCurrentMarkerVector() {
@@ -920,10 +966,10 @@ public class CellCounter extends JFrame implements ActionListener, ItemListener
 	public static void setType(final String type) {
 		if (instance == null || instance.ic == null || type == null) return;
 		final int index = Integer.parseInt(type) - 1;
-		final int buttons = instance.dynRadioVector.size();
+		final int buttons = instance.dynCounterRadioVector.size();
 		if (index < 0 || index >= buttons) return;
-		final JRadioButton rbutton = instance.dynRadioVector.elementAt(index);
-		instance.radioGrp.setSelected(rbutton.getModel(), true);
+		final JRadioButton rbutton = instance.dynCounterRadioVector.elementAt(index);
+		instance.counterRadioGrp.setSelected(rbutton.getModel(), true);
 		instance.currentMarkerVector = instance.typeVector.get(index);
 		instance.ic.setCurrentMarkerVector(instance.currentMarkerVector);
 	}
