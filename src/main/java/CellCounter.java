@@ -32,6 +32,7 @@ import ij.gui.ShapeRoi;
 import ij.gui.StackWindow;
 import ij.measure.Calibration;
 import ij.process.ImageProcessor;
+import ij.gui.PolygonRoi;
 
 import java.awt.Dimension;
 import java.awt.EventQueue;
@@ -99,7 +100,7 @@ public class CellCounter extends JFrame implements ActionListener, ItemListener
 	private CellCntrMarkerVector currentMarkerVector;
 	private int currentMarkerIndex;
 
-	private Vector<ShapeRoi> subregionVector;
+	private Vector<PolygonRoi> subregionVector;
 	private int currentSubregionIndex;
 
 	private Vector<JRadioButton> dynCounterRadioVector;
@@ -154,7 +155,7 @@ public class CellCounter extends JFrame implements ActionListener, ItemListener
 		txtCounterFieldVector = new Vector<JTextField>();
 		dynCounterRadioVector = new Vector<JRadioButton>();
 		dynSubregionTxtVector = new Vector<JTextField>();
-		subregionVector = new Vector<ShapeRoi>();
+		subregionVector = new Vector<PolygonRoi>();
 		initGUI();
 		populateTxtFields();
 		instance = this;
@@ -242,7 +243,10 @@ public class CellCounter extends JFrame implements ActionListener, ItemListener
 		gbc.gridy = 1;
 		dynPanel.add(dynSubregionPanel, gbc);
 
-		dynSubregionPanel.add(makeDynSubregionTxt(1));
+		JTextField firstsub = makeDynSubregionTxt(1);
+		firstsub.setText("Unspecified");
+		firstsub.setEditable(false);
+		dynSubregionPanel.add(firstsub);
 
 		getContentPane().add(dynPanel, BorderLayout.LINE_START);
 
@@ -705,10 +709,15 @@ public class CellCounter extends JFrame implements ActionListener, ItemListener
 			counterRadioGrp.add(button);
 		}
 		else if (command.equals(ADDSUBREGION)){
-			//TODO: pick an ROI here!
+
+			IJ.showStatus("Left-click to begin drawing a new subregion");
+			ic.setMakeNewPolygon(true);
+
+			// TODO: disable other GUI elements, add CANCEL button?
+
 			final int i = dynSubregionTxtVector.size() + 1;
 			dynSubregionGrid.setRows(i);
-			dynSubregionPanel.add(makeDynSubregionTxt(i));
+			dynSubregionPanel.add(makeDynSubregionTxt(i - 1));
 			validateLayout();
 		}
 		else if (command.equals(REMOVESUBREGION)){
